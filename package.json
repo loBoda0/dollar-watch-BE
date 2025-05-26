@@ -1,17 +1,25 @@
 {
-  "name": "dollar-watch-BE",
-  "version": "1.0.50",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
-  },
-  "dependencies": {
-    "@prisma/client": "^6.8.2",
-    "elysia": "latest"
-  },
-  "devDependencies": {
-    "bun-types": "latest",
-    "prisma": "^6.8.2"
-  },
-  "module": "src/index.js"
+    "name": "dollar-watch-BE",
+    "version": "1.0.50",
+    "scripts": {
+        "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "dev": "bun run --watch src/index.ts"
+    },
+    "dependencies": {
+        "@prisma/client": "^6.8.2",
+        "elysia": "latest"
+    },
+    "devDependencies": {
+        "bun-types": "latest",
+        "eslint": "^9.27.0",
+        "eslint-config-prettier": "^10.1.5",
+        "eslint-plugin-prettier": "^5.4.0",
+        "prettier": "^3.5.3",
+        "prisma": "^6.8.2"
+    },
+    "module": "src/index.js"
 }
