@@ -1,6 +1,7 @@
 {
     "name": "dollar-watch-BE",
     "version": "1.0.50",
+    "type": "module",
     "scripts": {
         "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
         "format": "prettier --write .",
@@ -11,7 +12,9 @@
         "migrate": "prisma migrate dev",
         "migrate:reset": "prisma migrate reset",
         "generate": "prisma generate",
-        "studio": "prisma studio"
+        "studio": "prisma studio",
+        "seed": "ts-node prisma/seed.js",
+        "reset": "prisma migrate reset"
     },
     "dependencies": {
         "@prisma/client": "^6.8.2",
@@ -23,7 +26,9 @@
         "eslint-config-prettier": "^10.1.5",
         "eslint-plugin-prettier": "^5.4.0",
         "prettier": "^3.5.3",
-        "prisma": "^6.8.2"
+        "prisma": "^6.8.2",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.8.3"
     },
     "module": "src/index.js"
 }

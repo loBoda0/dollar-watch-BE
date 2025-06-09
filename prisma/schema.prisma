@@ -26,9 +26,9 @@ model User {
     // Domain-specific relations
     transactions           Transaction[]
     investmentTransactions InvestmentTransaction[]
-    userInvestments        UserInvestment[]
     dividends              Dividend[]
     paychecks              Paycheck[]
+    GovernmentTransfer     GovernmentTransfer[]
 }
 
 model Session {
@@ -36,9 +36,8 @@ model Session {
     userId       Int
     sessionToken String   @unique
     expires      DateTime
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
 
     user User @relation(fields: [userId], references: [id])
 
@@ -59,19 +58,17 @@ model VerificationToken {
 }
 
 model Account {
-    id                Int    @id @default(autoincrement())
+    id                Int      @id @default(autoincrement())
     userId            Int
     provider          String
     providerAccountId String
-
-    accessToken  String? @db.Text
-    refreshToken String? @db.Text
-    expiresAt    Int?
+    accessToken       String?  @db.Text
+    refreshToken      String?  @db.Text
+    expiresAt         Int?
+    createdAt         DateTime @default(now())
+    updatedAt         DateTime @updatedAt
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
 
     @@unique([provider, providerAccountId])
     @@index([userId])
@@ -83,15 +80,22 @@ enum UserRole {
 }
 
 model Transaction {
-    id          Int                 @id @default(autoincrement())
-    user        User                @relation(fields: [userId], references: [id])
-    userId      Int
-    category    TransactionCategory @relation(fields: [categoryId], references: [id])
-    categoryId  Int
-    amount      Decimal             @db.Decimal(15, 2)
-    description String?
-    date        DateTime
-    createdAt   DateTime            @default(now())
+    id           Int                 @id @default(autoincrement())
+    user         User                @relation(fields: [userId], references: [id])
+    userId       Int
+    category     TransactionCategory @relation(fields: [categoryId], references: [id])
+    categoryId   Int
+    currency     String              @default("EUR")
+    amount       Decimal             @db.Decimal(15, 2)
+    description  String?
+    date         DateTime
+    createdAt    DateTime            @default(now())
+    BudgetType   BudgetType?         @relation(fields: [budgetTypeId], references: [id])
+    budgetTypeId Int?
+    metadata     Json?
+
+    @@index([userId])
+    @@index([date])
 }
 
 model TransactionCategory {
@@ -111,26 +115,14 @@ model StockIssuer {
 }
 
 model Instrument {
-    id              Int                     @id @default(autoincrement())
-    name            String
-    symbol          String                  @unique
-    type            String // "stock", "etf", etc.
-    issuer          StockIssuer             @relation(fields: [issuerId], references: [id])
-    issuerId        Int
-    userInvestments UserInvestment[]
-    investmentTxs   InvestmentTransaction[]
-    dividends       Dividend[]
-}
-
-model UserInvestment {
-    id           Int        @id @default(autoincrement())
-    user         User       @relation(fields: [userId], references: [id])
-    userId       Int
-    instrument   Instrument @relation(fields: [instrumentId], references: [id])
-    instrumentId Int
-    quantity     Decimal    @db.Decimal(15, 6)
-    avgBuyPrice  Decimal    @db.Decimal(15, 2)
-    createdAt    DateTime   @default(now())
+    id            Int                     @id @default(autoincrement())
+    name          String
+    symbol        String                  @unique
+    type          String // "stock", "etf", etc.
+    issuer        StockIssuer             @relation(fields: [issuerId], references: [id])
+    issuerId      Int
+    investmentTxs InvestmentTransaction[]
+    dividends     Dividend[]
 }
 
 model InvestmentTransaction {
@@ -140,6 +132,7 @@ model InvestmentTransaction {
     instrument   Instrument @relation(fields: [instrumentId], references: [id])
     instrumentId Int
     type         String // "buy" or "sell"
+    currency     String     @default("EUR")
     quantity     Decimal    @db.Decimal(15, 6)
     price        Decimal    @db.Decimal(15, 2)
     date         DateTime
@@ -152,59 +145,88 @@ model Dividend {
     userId       Int
     instrument   Instrument @relation(fields: [instrumentId], references: [id])
     instrumentId Int
+    currency     String     @default("EUR")
     amount       Decimal    @db.Decimal(15, 2)
     date         DateTime
     createdAt    DateTime   @default(now())
 }
 
-model SalaryTaxCode {
-    id            Int                @id @default(autoincrement())
-    code          String             @unique
-    description   String?
-    contributions ContributionType[]
-    paychecks     Paycheck[]
-}
-
 model Paycheck {
-    id            Int                    @id @default(autoincrement())
-    user          User                   @relation(fields: [userId], references: [id])
-    userId        Int
-    taxCode       SalaryTaxCode          @relation(fields: [taxCodeId], references: [id])
-    taxCodeId     Int
-    grossAmount   Decimal                @db.Decimal(15, 2)
-    netAmount     Decimal                @db.Decimal(15, 2)
-    taxBase       Decimal                @db.Decimal(15, 2)
-    taxAmount     Decimal                @db.Decimal(15, 2)
-    mealAllowance Decimal?               @db.Decimal(15, 2)
-    forPeriod     String // "10.2023"
-    paymentDate   DateTime
-    createdAt     DateTime               @default(now())
-    incomeItems   IncomeItem[]
-    contributions PaycheckContribution[]
+    id          Int             @id @default(autoincrement())
+    user        User            @relation(fields: [userId], references: [id])
+    userId      Int
+    currency    String          @default("EUR")
+    grossAmount Decimal         @db.Decimal(15, 2)
+    netAmount   Decimal         @db.Decimal(15, 2)
+    taxBase     Decimal         @db.Decimal(15, 2)
+    taxAmount   Decimal         @db.Decimal(15, 2)
+    periodStart DateTime
+    periodEnd   DateTime
+    paymentDate DateTime
+    createdAt   DateTime        @default(now())
+    entries     PaycheckEntry[]
+
+    @@index([userId])
+    @@index([periodStart, periodEnd])
 }
 
-model IncomeItem {
-    id         Int      @id @default(autoincrement())
-    paycheck   Paycheck @relation(fields: [paycheckId], references: [id])
-    paycheckId Int
-    label      String
-    amount     Decimal  @db.Decimal(15, 2)
+enum PaycheckEntryType {
+    INCOME
+    CONTRIBUTION
+    ALLOWANCE
 }
 
-model ContributionType {
-    id              Int                    @id @default(autoincrement())
-    name            String
-    isEmployerPaid  Boolean                @default(false)
-    taxCode         SalaryTaxCode          @relation(fields: [taxCodeId], references: [id])
-    taxCodeId       Int
-    paycheckEntries PaycheckContribution[]
+model PaycheckEntry {
+    id           Int               @id @default(autoincrement())
+    paycheck     Paycheck          @relation(fields: [paycheckId], references: [id])
+    paycheckId   Int
+    amount       Decimal           @db.Decimal(15, 2)
+    type         PaycheckEntryType
+    budgetType   BudgetType        @relation(fields: [budgetTypeId], references: [id])
+    budgetTypeId Int
+    metadata     Json?
+    createdAt    DateTime          @default(now())
+
+    @@index([paycheckId])
+    @@index([type])
 }
 
-model PaycheckContribution {
-    id                 Int              @id @default(autoincrement())
-    paycheck           Paycheck         @relation(fields: [paycheckId], references: [id])
-    paycheckId         Int
-    contributionType   ContributionType @relation(fields: [contributionTypeId], references: [id])
-    contributionTypeId Int
-    amount             Decimal          @db.Decimal(15, 2)
+model BudgetCategory {
+    id   Int    @id @default(autoincrement())
+    code String @unique
+    name String
+
+    budgetTypes BudgetType[]
+}
+
+model BudgetType {
+    id          Int             @id @default(autoincrement())
+    code        String          @unique
+    name        String
+    countryCode String?
+    description String?
+    category    BudgetCategory? @relation(fields: [categoryId], references: [id])
+    categoryId  Int?
+
+    entries             PaycheckEntry[]
+    governmentTransfers GovernmentTransfer[]
+    transactions        Transaction[]
+}
+
+model GovernmentTransfer {
+    id           Int        @id @default(autoincrement())
+    userId       Int
+    budgetType   BudgetType @relation(fields: [budgetTypeId], references: [id])
+    budgetTypeId Int
+    type         String
+    description  String?
+    amount       Decimal    @db.Decimal(15, 2)
+    date         DateTime
+    createdAt    DateTime   @default(now())
+    metadata     Json?
+
+    user User @relation(fields: [userId], references: [id])
+
+    @@index([userId])
+    @@index([date])
 }
