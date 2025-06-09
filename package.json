@@ -7,7 +7,11 @@
         "format:check": "prettier --check .",
         "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
         "test": "echo \"Error: no test specified\" && exit 1",
-        "dev": "bun run --watch src/index.ts"
+        "dev": "bun run --watch src/index.ts",
+        "migrate": "prisma migrate dev",
+        "migrate:reset": "prisma migrate reset",
+        "generate": "prisma generate",
+        "studio": "prisma studio"
     },
     "dependencies": {
         "@prisma/client": "^6.8.2",
